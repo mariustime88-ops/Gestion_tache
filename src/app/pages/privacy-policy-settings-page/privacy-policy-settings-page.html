@@ -1,0 +1,73 @@
+<main class="policy-settings-page">
+  <a class="back-link" routerLink="/settings">← Retour aux paramètres</a>
+
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">ESPACE ADMINISTRATEUR</span>
+      <h1>Politique de confidentialité</h1>
+      <p>Rédigez et publiez les informations qui seront accessibles au public.</p>
+    </div>
+  </header>
+
+  <section class="policy-section" aria-labelledby="policy-heading">
+    <div class="section-heading">
+      <div>
+        <h2 id="policy-heading">Contenu de la politique</h2>
+        <p>La version publiée est affichée sur la page publique de confidentialité.</p>
+      </div>
+    </div>
+
+    <article class="policy-card">
+      @if (loadingPolicy()) {
+        <p class="policy-state" role="status">Chargement de la politique…</p>
+      } @else {
+        @if (policy()?.is_published) {
+          <p class="policy-publication" role="status">
+            Publiée
+            @if (policy()?.published_at; as publishedAt) {
+              le {{ publishedAt | date: 'dd/MM/yyyy à HH:mm' }}
+            }
+            — toute nouvelle publication remplacera la version visible par le public.
+          </p>
+        } @else {
+          <p class="policy-state">Aucune politique n’est publiée. Le texte ci-dessous ne sera public qu’après publication.</p>
+        }
+
+        <label class="policy-label" for="privacy-policy-content">Texte de la politique</label>
+        <textarea
+          id="privacy-policy-content"
+          class="policy-textarea"
+          rows="16"
+          maxlength="50000"
+          [value]="policyDraft()"
+          [disabled]="savingPolicy()"
+          aria-describedby="privacy-policy-help privacy-policy-count"
+          (input)="changePolicyDraft($event)"
+        ></textarea>
+        <div class="policy-editor-footer">
+          <p id="privacy-policy-help" class="policy-help">
+            Utilisez des lignes vides pour séparer les paragraphes. Le contenu est publié comme texte brut et ne peut pas injecter de code HTML.
+          </p>
+          <span id="privacy-policy-count" class="policy-count">{{ policyDraft().length }} / 50 000</span>
+        </div>
+        @if (policyError()) {
+          <p class="policy-feedback policy-feedback--error" role="alert">{{ policyError() }}</p>
+        }
+        @if (policySuccess()) {
+          <p class="policy-feedback policy-feedback--success" role="status">{{ policySuccess() }}</p>
+        }
+        <div class="policy-actions">
+          <a class="policy-preview-link" routerLink="/politique-confidentialite" target="_blank" rel="noopener">
+            Voir la page publique
+          </a>
+          <button
+            class="publish-button"
+            type="button"
+            [disabled]="savingPolicy() || !policyChanged() || !policyDraft().trim()"
+            (click)="publishPolicy()"
+          >{{ savingPolicy() ? 'Publication…' : policy()?.is_published ? 'Publier les modifications' : 'Publier la politique' }}</button>
+        </div>
+      }
+    </article>
+  </section>
+</main>

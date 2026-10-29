@@ -1,0 +1,186 @@
+<div class="ui-page-head">
+  <div>
+    <h2>Les tâches</h2>
+    <p>
+      @if (user()?.role === 'dg') { Suivez les tâches de toute l’organisation et leurs responsables. }
+      @else if (user()?.role === 'division_manager') { Suivez les tâches et les agents de votre division. }
+      @else if (user()?.role === 'manager') { Un suivi partagé de l’activité de votre service. }
+      @else if (user()?.role === 'admin') { Vue complète des tâches de l’organisation. }
+      @else { Retrouvez les tâches qui vous sont confiées. }
+    </p>
+  </div>
+  <div class="ui-actions">
+    <button class="ui-btn" type="button" [disabled]="exporting()" (click)="exportTasks()">
+      <app-icon name="download" />{{ exporting() ? 'Export…' : 'Exporter (Excel)' }}
+    </button>
+    @if (canCreateTask()) {
+      <button class="ui-btn ui-btn--primary" type="button" (click)="formOpen.update((open) => !open)">
+        <app-icon name="plus" />Ajouter une tâche
+      </button>
+    }
+  </div>
+</div>
+
+@if (error()) {
+  <div class="ui-alert ui-alert--error page-alert" role="alert">
+    <span>{{ error() }}</span>
+    <button class="alert-close" type="button" aria-label="Fermer le message" (click)="error.set('')"><app-icon name="close" /></button>
+  </div>
+}
+@if (success()) {
+  <div class="ui-alert ui-alert--success page-alert" role="status">{{ success() }}</div>
+}
+
+@if (formOpen() && canCreateTask()) {
+  <section class="ui-card create-panel">
+    <div class="create-head">
+      <h3>
+        @if (user()?.role === 'admin' || capabilityRole() === 'dg') { Affecter une tâche dans l’organisation }
+        @else if (capabilityRole() === 'division_manager') { Affecter une tâche dans votre division }
+        @else { Préparer une tâche pour votre service }
+      </h3>
+      <button class="ui-btn ui-btn--sm" type="button" aria-label="Fermer le formulaire" (click)="formOpen.set(false)"><app-icon name="close" /></button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="createTask()" novalidate>
+      <div class="ui-form-grid">
+        <div class="ui-field field--wide">
+          <label for="task-title">Intitulé *</label>
+          <input id="task-title" class="ui-input" type="text" formControlName="title" placeholder="Ex. Préparer le rapport d’activité">
+          @if (form.controls.title.touched && form.controls.title.invalid) {
+            <small class="field-error">L’intitulé est requis (180 caractères maximum).</small>
+          }
+        </div>
+        <div class="ui-field">
+          <label for="assigned-to">Affecter à *</label>
+          <select id="assigned-to" class="ui-select" formControlName="assigned_to">
+            <option [ngValue]="0" disabled>Choisir un responsable ou agent</option>
+            @for (assignee of filteredAgents(); track assignee.id) {
+              <option [ngValue]="assignee.id">
+                {{ assignee.name }}{{ capabilityRole() === 'dg' ? ' · ' + workspace.roleName(assignee.role) : '' }}
+              </option>
+            }
+          </select>
+          @if (filteredAgents().length === 0) {
+            <small class="field-help">Aucun responsable ou agent actif dans votre périmètre.</small>
+          }
+        </div>
+        <div class="ui-field">
+          <label for="due-at">Date limite *</label>
+          <input id="due-at" class="ui-input" type="datetime-local" formControlName="due_at">
+          @if (form.controls.due_at.touched && form.controls.due_at.invalid) {
+            <small class="field-error">La date limite est obligatoire et ne peut pas être antérieure à aujourd’hui.</small>
+          }
+        </div>
+        <div class="ui-field">
+          <label for="task-priority">Priorité *</label>
+          <select id="task-priority" class="ui-select" formControlName="priority">
+            @for (priority of priorities; track priority) {
+              <option [value]="priority">{{ priorityLabels[priority] }}</option>
+            }
+          </select>
+        </div>
+        <div class="ui-field field--wide">
+          <label for="task-description">Description *</label>
+          <textarea id="task-description" class="ui-textarea" rows="3" formControlName="description" placeholder="Décrivez le résultat attendu…"></textarea>
+          @if (form.controls.description.touched && form.controls.description.invalid) {
+            <small class="field-error">Ajoutez quelques précisions sur le travail attendu.</small>
+          }
+        </div>
+        <div class="ui-field field--wide">
+          <label for="task-instructions">Consignes <span class="optional">(facultatif)</span></label>
+          <textarea id="task-instructions" class="ui-textarea" rows="2" formControlName="instructions" placeholder="Points de vigilance, documents à consulter, format attendu…"></textarea>
+        </div>
+        <div class="ui-field field--wide">
+          <label for="task-file">Pièce jointe <span class="optional">(facultatif · 10 Mo maximum)</span></label>
+          <input id="task-file" class="ui-input file-input" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx" (change)="onFileSelected($event)">
+          @if (selectedFile()) {
+            <small class="field-help">Fichier sélectionné : {{ selectedFile()?.name }}</small>
+          }
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="ui-btn" type="button" (click)="formOpen.set(false)">Annuler</button>
+        <button class="ui-btn ui-btn--primary" type="submit" [disabled]="saving() || filteredAgents().length === 0">
+          {{ saving() ? 'Enregistrement…' : 'Affecter la tâche' }}
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
+<section class="ui-card">
+  <div class="ui-toolbar">
+    <div class="result-count"><strong>{{ displayTotal() }}</strong> tâche{{ displayTotal() === 1 ? '' : 's' }}</div>
+    <input class="ui-input ui-grow" type="search" aria-label="Rechercher une tâche" placeholder="Rechercher…" [value]="search()" (input)="changeSearch($event)">
+    <select class="ui-select" aria-label="Filtrer par statut" [value]="statusFilter()" (change)="changeStatus($event)">
+      <option value="all">Tous les statuts</option>
+      <option value="assigned">Nouvelles</option>
+      <option value="in_progress">En cours</option>
+      <option value="submitted">Terminées · à valider</option>
+      <option value="needs_revision">À refaire</option>
+      <option value="paused">En attente de réaffectation</option>
+      <option value="completed">Acceptées</option>
+      <option value="rejected">Rejetées</option>
+    </select>
+    <select class="ui-select" aria-label="Filtrer par priorité" [value]="priorityFilter()" (change)="changePriority($event)">
+      <option value="all">Toutes les priorités</option>
+      @for (priority of priorities; track priority) {
+        <option [value]="priority">{{ priorityLabels[priority] }}</option>
+      }
+    </select>
+    <button class="ui-btn" type="button" [class.ui-btn--primary]="overdueOnly()" [attr.aria-pressed]="overdueOnly()" (click)="toggleOverdue()">
+      <app-icon name="alert" />En retard
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="ui-empty" role="status">Chargement des tâches…</div>
+  } @else if (visibleTasks().length) {
+    <ul class="task-list">
+      @for (task of visibleTasks(); track task.id) {
+        <li>
+          <a class="task-row" [routerLink]="['/tasks', task.id]">
+            <span class="task-main">
+              <span class="task-top">
+                <strong>{{ task.title }}</strong>
+                <span class="task-badges">
+                  <span class="ui-badge" [class]="'ui-badge ui-badge--' + statusTone(task.status)">{{ statusLabel(task) }}</span>
+                  <span class="ui-badge" [class]="'ui-badge ui-badge--' + priorityTone(task.priority)">{{ priorityLabels[task.priority] }}</span>
+                  @if (task.is_overdue) {
+                    <span class="ui-badge ui-badge--red"><app-icon name="alert" />En retard</span>
+                  }
+                  @if (task.extension_status === 'pending') {
+                    <span class="ui-badge ui-badge--amber"><app-icon name="clock" />Report demandé</span>
+                  }
+                </span>
+              </span>
+              <span class="task-description">{{ task.description }}</span>
+              <span class="task-meta">
+                <span>{{ task.assignee?.name ?? 'À réaffecter' }}</span>
+                <span aria-hidden="true">·</span>
+                <span>{{ task.department }}</span>
+                @if (task.due_at) {
+                  <span aria-hidden="true">·</span>
+                  <span [class.meta-late]="task.is_overdue">Pour le {{ task.due_at | date:'d MMM y':'':'fr' }}</span>
+                }
+              </span>
+            </span>
+            <app-icon class="row-arrow" name="arrow" />
+          </a>
+        </li>
+      }
+    </ul>
+    @if (lastPage() > 1) {
+      <nav class="ui-pagination" aria-label="Pagination des tâches">
+        <button class="ui-btn ui-btn--sm" type="button" [disabled]="page() === 1" (click)="changePage(page() - 1)">Précédent</button>
+        <span>Page {{ page() }} sur {{ lastPage() }}</span>
+        <button class="ui-btn ui-btn--sm" type="button" [disabled]="page() === lastPage()" (click)="changePage(page() + 1)">Suivant</button>
+      </nav>
+    }
+  } @else {
+    <div class="ui-empty">
+      <strong>Aucune tâche ne correspond à ces critères.</strong>
+      <p>Essayez un autre mot-clé ou modifiez les filtres.</p>
+    </div>
+  }
+</section>

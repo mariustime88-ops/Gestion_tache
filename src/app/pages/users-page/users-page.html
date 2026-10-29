@@ -1,0 +1,533 @@
+<main class="users-page" [class.users-page--form]="formMode() !== null">
+  <section class="users-workspace" [class.users-workspace--form]="formMode() !== null"
+    aria-label="Gestion de l’organisation" [hidden]="formMode() !== null || selectedUser() !== null">
+  <header class="page-heading">
+    @if (formMode(); as mode) {
+      <button type="button" class="button form-back-button" [disabled]="saving()" (click)="closeForm()">← Retour</button>
+      <h1 id="form-page-title">{{ mode === 'create-user' ? 'Ajouter un profil' : mode === 'edit-user' ? 'Modifier un profil' : mode === 'create-division' ? 'Ajouter une division' : mode === 'edit-division' ? 'Modifier une division' : 'Ajouter un rôle' }}</h1>
+    } @else {
+      <div>
+        <p class="eyebrow">Administration informatique</p>
+        <h1>Organisation et profils</h1>
+        <p class="page-intro">Gérez les comptes, les rôles, les divisions et les pages accessibles à chaque profil.</p>
+      </div>
+      <div class="heading-actions">
+        <button type="button" class="button button-secondary" (click)="openCreateDivision()">Ajouter une division</button>
+        <button type="button" class="button button-secondary" (click)="openCreateRole()">Ajouter un rôle</button>
+        <button type="button" class="button button-primary" (click)="openCreateUser()">Ajouter un profil</button>
+      </div>
+    }
+  </header>
+
+  @if (toast(); as message) {
+    <div class="action-toast notice" [class.notice-error]="message.kind === 'error'" [class.notice-success]="message.kind === 'success'" [attr.role]="message.kind === 'error' ? 'alert' : 'status'" aria-live="polite">
+      <span class="action-toast-icon" aria-hidden="true">{{ message.kind === 'success' ? '✓' : '!' }}</span>
+      <p>{{ message.message }}</p>
+      <button type="button" aria-label="Fermer la notification" (click)="dismissToast()">×</button>
+    </div>
+  }
+
+  @if (!formMode() && error()) {
+    <div class="notice notice-error" role="alert">{{ error() }}</div>
+  }
+
+  <section class="users-card" aria-label="Profils et divisions" [hidden]="formMode() !== null">
+    <div class="tabs" role="tablist" aria-label="Filtrer les profils">
+      @for (tab of roleTabs(); track tab.value) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="selectedRole() === tab.value"
+          [class.tab-active]="selectedRole() === tab.value"
+          (click)="selectTab(tab.value)"
+        >{{ tab.label }}</button>
+      }
+    </div>
+
+    <div class="table-toolbar">
+      <div>
+        <h2>{{ selectedRole() === 'divisions' ? 'Divisions' : 'Profils de l’équipe' }}</h2>
+        <p>{{ selectedRole() === 'divisions' ? 'Services et divisions de l’organisation.' : 'Comptes, statuts et droits d’accès aux pages.' }}</p>
+      </div>
+      <label class="search-box">
+        <span class="visually-hidden">Rechercher un profil</span>
+        <input
+          type="search"
+          [value]="search()"
+          (input)="onSearchInput($event)"
+          [placeholder]="selectedRole() === 'divisions' ? 'Rechercher une division…' : 'Rechercher un nom, e-mail ou service…'"
+        />
+      </label>
+    </div>
+
+    @if (selectedRole() !== 'divisions') {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Profil</th>
+              <th scope="col">Rôle</th>
+              <th scope="col">Service / division</th>
+              <th scope="col">Pages autorisées</th>
+              <th scope="col">Statut</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr>
+                <td>
+                  <div class="user-identity">
+                    <span class="user-avatar" aria-hidden="true">{{ user.name.charAt(0).toLocaleUpperCase('fr') }}</span>
+                    <span><strong>{{ user.name }}</strong><small>{{ user.email }}</small></span>
+                  </div>
+                </td>
+                <td>{{ workspace.roleName(user.role) }}</td>
+                <td>
+                  <span>{{ user.department || '—' }}</span>
+                  @if (user.division) {
+                    <small class="division-label">{{ user.division }}</small>
+                  }
+                </td>
+                <td>
+                  @if (user.role === 'admin') {
+                    <span class="permission-chip permission-chip-admin">Tous les accès</span>
+                  } @else if (user.allowed_pages?.length) {
+                    <div class="permission-list">
+                      @for (page of user.allowed_pages; track page) {
+                        <span class="permission-chip">{{ pagePermissionLabel(page) }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="muted">Accès du rôle</span>
+                  }
+                </td>
+                <td>
+                  <span class="profile-status" [class.profile-status--active]="user.profile_status === 'active'" [class.profile-status--suspended]="user.profile_status === 'suspended' || user.profile_status === 'rejected'">
+                    {{ profileStatusLabels[user.profile_status] }}
+                  </span>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button type="button" class="action-view" [attr.aria-label]="'Voir le profil de ' + user.name" title="Voir le profil" (click)="openDetails(user)">
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"></path>
+                        <circle cx="12" cy="12" r="2.7"></circle>
+                      </svg>
+                    </button>
+                    @if (user.role !== 'admin') {
+                      <button type="button" class="action-edit" [attr.aria-label]="'Modifier le profil de ' + user.name" title="Modifier" (click)="openEditUser(user)">
+                        <span aria-hidden="true">✎</span>
+                      </button>
+                      @if (user.profile_status === 'active') {
+                        <button type="button" class="action-warning" [disabled]="busyUserId() === user.id" [attr.aria-label]="'Suspendre ' + user.name" title="Suspendre le compte" (click)="setProfileStatus(user, 'suspended')">
+                          <span aria-hidden="true">⏸</span>
+                        </button>
+                      } @else {
+                        <button type="button" class="action-positive" [disabled]="busyUserId() === user.id" [attr.aria-label]="'Activer ' + user.name" title="Activer le compte" (click)="setProfileStatus(user, 'active')">
+                          <span aria-hidden="true">✓</span>
+                        </button>
+                      }
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              @if (!loading()) {
+                <tr><td colspan="6" class="empty-state"><strong>Aucun profil à afficher.</strong><p>Les comptes de l’organisation apparaîtront ici.</p></td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (loading()) {
+        <p class="list-state" role="status">Chargement des profils…</p>
+      }
+
+      <footer class="pagination">
+        <span>{{ displayFrom() }}–{{ displayTo() }} sur {{ total() }} profil(s)</span>
+        <nav class="pagination-controls" aria-label="Pagination des profils">
+          <button type="button" [disabled]="page() <= 1 || loading()" (click)="changePage(page() - 1)">Précédent</button>
+          @for (pageNumber of pageNumbers(); track pageNumber) {
+            <button
+              type="button"
+              [class.pagination-page--active]="pageNumber === page()"
+              [attr.aria-current]="pageNumber === page() ? 'page' : null"
+              [attr.aria-label]="'Page ' + pageNumber"
+              [disabled]="loading()"
+              (click)="changePage(pageNumber)"
+            >{{ pageNumber }}</button>
+          }
+          <button type="button" [disabled]="page() >= lastPage() || loading()" (click)="changePage(page() + 1)">Suivant</button>
+        </nav>
+      </footer>
+    } @else {
+      @if (divisionsLoading()) {
+        <p class="list-state" role="status">Chargement des divisions…</p>
+      } @else {
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Division</th><th scope="col">Service</th><th scope="col">Membres actifs</th><th scope="col">Responsable</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+              @for (division of visibleDivisions(); track division.id) {
+                <tr>
+                  <td><strong>{{ division.name }}</strong></td>
+                  <td>{{ division.department }}</td>
+                  <td>{{ division.active_members_count ?? 0 }} / {{ division.members_count ?? 0 }}</td>
+                  <td>{{ division.manager?.name ?? 'Non assigné' }}</td>
+                  <td><div class="table-actions">
+                    <button type="button" class="action-edit" [attr.aria-label]="'Modifier ' + division.name" (click)="openEditDivision(division)">✎</button>
+                    <button type="button" class="action-danger" [attr.aria-label]="'Supprimer ' + division.name" (click)="deleteDivision(division)">×</button>
+                  </div></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="empty-state"><strong>Aucune division.</strong><p>Ajoutez une division pour structurer l’organisation.</p></td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (divisionDeletionHistory().length > 0) {
+          <details class="deletion-history">
+            <summary>Historique des divisions supprimées ({{ divisionDeletionHistory().length }})</summary>
+            <ul>
+              @for (entry of divisionDeletionHistory(); track entry.deleted_at + entry.name) {
+                <li>{{ entry.name }} — {{ entry.department }} · {{ entry.members_count }} membre(s), {{ entry.paused_tasks_count }} tâche(s) mise(s) en pause</li>
+              }
+            </ul>
+          </details>
+        }
+      }
+    }
+  </section>
+  </section>
+
+  @if (selectedUser(); as detail) {
+    <section class="profile-detail-page" aria-labelledby="detail-page-title">
+      <header class="profile-detail-heading">
+        <div>
+          <p class="eyebrow">PROFIL DE L’ÉQUIPE</p>
+          <h1 id="detail-page-title">{{ detail.user.name }}</h1>
+        </div>
+        <div class="profile-detail-actions">
+          <button type="button" class="button button-secondary" (click)="closeDetails()">← Retour aux profils</button>
+          @if (detail.user.role !== 'admin') {
+            <button type="button" class="button button-primary" (click)="openEditUser(detail.user)">Modifier le profil</button>
+          }
+        </div>
+      </header>
+
+      <nav class="detail-tabs" aria-label="Sections du profil" role="tablist">
+        <button type="button" role="tab" [attr.aria-selected]="detailTab() === 'information'"
+          [class.detail-tab--active]="detailTab() === 'information'" (click)="selectDetailTab('information')">Informations</button>
+        <button type="button" role="tab" [attr.aria-selected]="detailTab() === 'access'"
+          [class.detail-tab--active]="detailTab() === 'access'" (click)="selectDetailTab('access')">Accès et sécurité</button>
+        @if (['manager', 'division_manager'].includes(capabilityRoleFor(detail.user.role))) {
+          <button type="button" role="tab" [attr.aria-selected]="detailTab() === 'team'"
+            [class.detail-tab--active]="detailTab() === 'team'" (click)="selectDetailTab('team')">
+            Équipe ({{ detail.team_members.length }})
+          </button>
+        }
+      </nav>
+
+      @if (detailTab() === 'information') {
+        <section class="detail-content" aria-label="Informations du profil">
+          <h2>Informations personnelles et organisationnelles</h2>
+          <dl class="detail-grid">
+            <div><dt>Nom et prénoms</dt><dd>{{ detail.user.name }}</dd></div>
+            <div><dt>Adresse e-mail</dt><dd>{{ detail.user.email }}</dd></div>
+            <div><dt>Téléphone</dt><dd>{{ detail.user.phone || 'Non renseigné' }}</dd></div>
+            <div><dt>Rôle</dt><dd>{{ workspace.roleName(detail.user.role) }}</dd></div>
+            <div><dt>Service</dt><dd>{{ detail.user.department || '—' }}</dd></div>
+            <div><dt>Division</dt><dd>{{ detail.user.division || '—' }}</dd></div>
+            <div><dt>Statut du compte</dt><dd>{{ profileStatusLabels[detail.user.profile_status] }}</dd></div>
+            @if (detail.user.created_at) {
+              <div><dt>Date de création</dt><dd>{{ detail.user.created_at | date: 'dd/MM/yyyy' }}</dd></div>
+            }
+          </dl>
+        </section>
+      } @else if (detailTab() === 'access') {
+        <section class="detail-content" aria-label="Accès du profil">
+          <h2>Pages accessibles</h2>
+          @if (detail.user.role === 'admin') {
+            <p class="detail-note">Ce compte dispose de tous les accès à la plateforme.</p>
+          } @else if (detail.user.allowed_pages?.length) {
+            <div class="permission-list">
+              @for (page of detail.user.allowed_pages; track page) {
+                <span class="permission-chip">{{ pagePermissionLabel(page) }}</span>
+              }
+            </div>
+          } @else {
+            <p class="detail-note">Les accès sont définis selon le rôle du profil.</p>
+          }
+        </section>
+      } @else if (detailTab() === 'team') {
+        <section class="detail-content" aria-label="Équipe rattachée">
+          <header class="detail-section-heading">
+            <div>
+              <h2>Équipe rattachée</h2>
+              <p>{{ detail.team_members.length }} membre(s)</p>
+            </div>
+            <button type="button" class="button button-secondary" (click)="addAgentToTeam(detail.user)">Ajouter un agent</button>
+          </header>
+          @if (detail.team_members.length) {
+            <div class="team-table-scroll">
+              <table class="team-table">
+                <thead><tr><th scope="col">Nom</th><th scope="col">Adresse e-mail</th><th scope="col">Rôle</th><th scope="col">Service / division</th></tr></thead>
+                <tbody>
+                  @for (member of detail.team_members; track member.id) {
+                    <tr>
+                      <td>{{ member.name }}</td>
+                      <td>{{ member.email }}</td>
+                      <td>{{ workspace.roleName(member.role) }}</td>
+                      <td>{{ member.department || '—' }}{{ member.division ? ' / ' + member.division : '' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="detail-note">Aucun membre n’est encore rattaché à ce profil.</p>
+          }
+        </section>
+      }
+    </section>
+  }
+
+  @if (formMode(); as mode) {
+    <section aria-labelledby="form-page-title">
+      @if (mode === 'create-user' || mode === 'edit-user') {
+        <form class="workspace-form" (ngSubmit)="saveProfile()">
+          <div>
+            <div class="form-grid">
+              <label>Nom et prénoms
+                <input type="text" name="name" [(ngModel)]="profileDraft.name" autocomplete="name" required />
+              </label>
+              <label>Adresse e-mail
+                <input type="email" name="email" [(ngModel)]="profileDraft.email" autocomplete="email" [readonly]="mode === 'edit-user'" required />
+              </label>
+              @if (mode === 'create-user') {
+                <label>Mot de passe initial
+                  <input type="password" name="password" [(ngModel)]="profileDraft.password" autocomplete="new-password" minlength="8" required />
+                  <small>8 caractères minimum.</small>
+                </label>
+              }
+              <label>Rôle
+                <select name="role" [ngModel]="profileDraft.role" (ngModelChange)="onDraftRoleChanged($event)" required>
+                  @for (role of workspace.organizationRoles(); track role.id) {
+                    @if (role.slug !== 'admin') { <option [value]="role.slug">{{ role.name }}</option> }
+                  }
+                </select>
+              </label>
+              @if (capabilityRoleFor(profileDraft.role) === 'manager') {
+                <label>Service
+                  <select name="department" [(ngModel)]="profileDraft.department" required [disabled]="divisionsLoading() || availableDepartments().length === 0">
+                    <option value="" disabled>Choisir un service</option>
+                    @for (department of availableDepartments(); track department) {
+                      <option [value]="department">{{ department }}</option>
+                    }
+                  </select>
+                  @if (divisionsLoading()) {
+                    <small role="status">Chargement des services…</small>
+                  } @else if (availableDepartments().length === 0) {
+                    <small>Aucun service disponible. Créez d’abord une division.</small>
+                  }
+                </label>
+              }
+              @if (capabilityRoleFor(profileDraft.role) === 'agent' || capabilityRoleFor(profileDraft.role) === 'division_manager') {
+                <label>Division
+                  <select name="division_id" [(ngModel)]="profileDraft.division_id" required>
+                    <option [ngValue]="null" disabled>Choisir une division</option>
+                    @for (division of availableDivisions(); track division.id) {
+                      <option [ngValue]="division.id">{{ division.department }} — {{ division.name }}</option>
+                    }
+                  </select>
+                </label>
+              }
+              <label>Téléphone <span class="optional">(facultatif)</span>
+                <input type="tel" name="phone" [(ngModel)]="profileDraft.phone" autocomplete="tel" />
+              </label>
+            </div>
+          </div>
+
+          <fieldset class="permission-fieldset">
+            <legend>Accès aux menus</legend>
+            <label class="permission-option permission-option--all">
+              <input
+                type="checkbox"
+                [checked]="allMenusSelected()"
+                (change)="onAllMenusChange($event)"
+              />
+              <span><strong>Accès à tous les menus (par défaut)</strong><small>Autoriser les menus disponibles pour le rôle sélectionné.</small></span>
+            </label>
+
+            @if (availableMenuPermissions().length > 0) {
+              <div class="permission-groups">
+                <section class="permission-group" aria-label="Menus de l’application">
+                  <h3>Menus de l’application</h3>
+                  @for (permission of availableMenuPermissions(); track permission.key) {
+                    @if (permission.key !== 'profile' && permission.key !== 'audit') {
+                      <label class="permission-option">
+                        <input
+                          type="checkbox"
+                          [checked]="profileDraft.allowed_pages.includes(permission.key)"
+                          [disabled]="!isPagePermissionAvailable(permission.key)"
+                          (change)="onPagePermissionChange(permission.key, $event)"
+                        />
+                        <span>
+                          <strong>{{ permission.label }}</strong>
+                          <small>{{ isPagePermissionAvailable(permission.key) ? permission.description : 'Disponible uniquement pour le Directeur général.' }}</small>
+                        </span>
+                      </label>
+                    }
+                  }
+                  <label class="permission-option permission-option--reserved">
+                    <input type="checkbox" disabled />
+                    <span><strong>Paramètres</strong><small>Réservé aux comptes administrateurs.</small></span>
+                  </label>
+                </section>
+                <section class="permission-group" aria-label="Administration et compte">
+                  <h3>Administration et compte</h3>
+                  @for (permission of availableMenuPermissions(); track permission.key) {
+                    @if (permission.key === 'profile' || permission.key === 'audit') {
+                      <label class="permission-option">
+                        <input
+                          type="checkbox"
+                          [checked]="profileDraft.allowed_pages.includes(permission.key)"
+                          [disabled]="!isPagePermissionAvailable(permission.key)"
+                          (change)="onPagePermissionChange(permission.key, $event)"
+                        />
+                        <span>
+                          <strong>{{ permission.label }}</strong>
+                          <small>{{ isPagePermissionAvailable(permission.key) ? permission.description : 'Disponible uniquement pour le Directeur général.' }}</small>
+                        </span>
+                      </label>
+                    }
+                  }
+                  <label class="permission-option permission-option--reserved">
+                    <input type="checkbox" disabled />
+                    <span><strong>Organisation et profils</strong><small>Réservé aux comptes administrateurs.</small></span>
+                  </label>
+                </section>
+              </div>
+            }
+
+            @if (availableActionPermissions().length > 0) {
+              <section class="permission-group permission-group--actions" aria-label="Actions autorisées">
+                <h3>Actions autorisées</h3>
+                @for (permission of availableActionPermissions(); track permission.key) {
+                  <label class="permission-option">
+                    <input
+                      type="checkbox"
+                      [checked]="profileDraft.allowed_pages.includes(permission.key)"
+                      (change)="onPagePermissionChange(permission.key, $event)"
+                    />
+                    <span><strong>{{ permission.label }}</strong><small>{{ permission.description }}</small></span>
+                  </label>
+                }
+              </section>
+            }
+
+            @if (availableMenuPermissions().length === 0 && availableActionPermissions().length === 0) {
+              <p class="muted">Aucune page attribuable à ce rôle.</p>
+            }
+          </fieldset>
+
+          @if (error()) { <p class="notice notice-error form-error" role="alert">{{ error() }}</p> }
+          <footer class="form-actions">
+            <button type="submit" class="button button-primary" [disabled]="saving()">
+              {{ saving() ? 'Enregistrement…' : mode === 'create-user' ? 'Créer le profil' : 'Enregistrer les modifications' }}
+            </button>
+          </footer>
+        </form>
+      } @else if (mode === 'create-division' || mode === 'edit-division') {
+        <form class="workspace-form" (ngSubmit)="saveDivision()">
+          <div>
+            <div class="form-grid">
+              <label>Service
+                <input type="text" name="department" [(ngModel)]="divisionDraft.department" required />
+              </label>
+              <label>Nom de la division
+                <input type="text" name="divisionName" [(ngModel)]="divisionDraft.name" required />
+              </label>
+              <label>Chef de division <span class="optional">(facultatif)</span>
+                <select name="manager_id" [(ngModel)]="divisionDraft.manager_id">
+                  <option [ngValue]="null">Non assigné</option>
+                  @for (manager of divisionManagers(); track manager.id) {
+                    <option [ngValue]="manager.id">{{ manager.name }} — {{ manager.department }} / {{ manager.division }}</option>
+                  }
+                </select>
+                @if (divisionManagersLoading()) { <small role="status">Chargement des responsables…</small> }
+              </label>
+            </div>
+          </div>
+          @if (error()) { <p class="notice notice-error form-error" role="alert">{{ error() }}</p> }
+          <footer class="form-actions">
+            <button type="submit" class="button button-primary" [disabled]="saving() || divisionManagersLoading()">{{ saving() ? 'Enregistrement…' : mode === 'create-division' ? 'Créer la division' : 'Enregistrer les modifications' }}</button>
+          </footer>
+        </form>
+      } @else {
+        <form class="workspace-form" (ngSubmit)="saveRole()">
+          <div>
+            <div class="form-grid">
+              <label>Nom du rôle
+                <input type="text" name="roleName" [(ngModel)]="roleDraft.name" required maxlength="120" />
+              </label>
+              <label>Position dans la hiérarchie
+                <select name="parent_slug" [(ngModel)]="roleDraft.parent_slug" required>
+                  @for (role of workspace.organizationRoles(); track role.id) {
+                    @if (role.slug !== 'admin') { <option [value]="role.slug">Au-dessus de {{ role.name }}</option> }
+                  }
+                </select>
+                <small>Le rôle sera placé au-dessus du niveau sélectionné.</small>
+              </label>
+            </div>
+          </div>
+          @if (error()) { <p class="notice notice-error form-error" role="alert">{{ error() }}</p> }
+          <footer class="form-actions">
+            <button type="submit" class="button button-primary" [disabled]="saving()">{{ saving() ? 'Enregistrement…' : 'Créer le rôle' }}</button>
+          </footer>
+        </form>
+      }
+    </section>
+  }
+</main>
+
+@if (pendingProfileStatus(); as action) {
+  <div class="dialog-backdrop" (click)="cancelProfileStatusChange()">
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="profile-status-title" (click)="$event.stopPropagation()">
+      <header class="dialog-heading">
+        <div>
+          <p class="eyebrow">Confirmation</p>
+          <h2 id="profile-status-title">{{ action.status === 'suspended' ? 'Suspendre ce profil ?' : 'Réactiver ce profil ?' }}</h2>
+        </div>
+      </header>
+      <p>
+        {{ action.status === 'suspended' ? 'Vous êtes sur le point de suspendre le compte de' : 'Vous êtes sur le point de réactiver le compte de' }}
+        <strong>{{ action.user.name }}</strong>.
+        {{ action.status === 'suspended' ? 'Il ne pourra plus se connecter jusqu’à sa réactivation.' : 'Il pourra de nouveau accéder à la plateforme.' }}
+      </p>
+      @if (error()) { <p class="dialog-error notice-error" role="alert">{{ error() }}</p> }
+      <footer class="dialog-actions">
+        <button type="button" class="button button-secondary" [disabled]="busyUserId() !== null" (click)="cancelProfileStatusChange()">Annuler</button>
+        <button
+          type="button"
+          [class]="action.status === 'suspended' ? 'button button-danger' : 'button button-primary'"
+          [disabled]="busyUserId() !== null"
+          (click)="confirmProfileStatusChange()"
+        >{{ busyUserId() === action.user.id ? 'Mise à jour…' : action.status === 'suspended' ? 'Suspendre le compte' : 'Réactiver le compte' }}</button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (divisionToDelete(); as division) {
+  <div class="dialog-backdrop" (click)="cancelDeleteDivision()">
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-division-title" (click)="$event.stopPropagation()">
+      <header class="dialog-heading"><div><p class="eyebrow">Confirmation</p><h2 id="delete-division-title">Supprimer la division ?</h2></div></header>
+      <p>La division <strong>{{ division.name }}</strong> sera supprimée. Les profils conserveront leur historique et les tâches ouvertes seront mises en pause.</p>
+      @if (error()) { <p class="dialog-error notice-error" role="alert">{{ error() }}</p> }
+      <footer class="dialog-actions"><button type="button" class="button button-secondary" [disabled]="deletingDivisionId() !== null" (click)="cancelDeleteDivision()">Annuler</button><button type="button" class="button button-danger" [disabled]="deletingDivisionId() !== null" (click)="confirmDeleteDivision()">{{ deletingDivisionId() === division.id ? 'Suppression…' : 'Confirmer la suppression' }}</button></footer>
+    </section>
+  </div>
+}

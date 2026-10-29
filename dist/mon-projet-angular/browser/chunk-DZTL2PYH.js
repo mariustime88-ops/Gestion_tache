@@ -1,0 +1,1 @@
+import{K as o,ga as a}from"./chunk-WIVYATLW.js";var r="suivi-admin-theme",d=class e{darkMode=a(localStorage.getItem(r)==="dark");toggle(){let t=!this.darkMode();localStorage.setItem(r,t?"dark":"light"),this.darkMode.set(t)}static \u0275fac=function(i){return new(i||e)};static \u0275prov=o({token:e,factory:e.\u0275fac,providedIn:"root"})};export{d as a};

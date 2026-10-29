@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.audit-error {
+  margin: 16px;
+}
+
+.audit-changes {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  font-size: 0.8rem;
+  list-style: none;
+  word-break: break-word;
+}
+
+.audit-more {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .audit-more {
+    justify-content: flex-end;
+  }
+}

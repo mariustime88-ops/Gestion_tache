@@ -1,0 +1,100 @@
+<section class="dashboard-page">
+  @if (error()) {
+    <div class="ui-alert ui-alert--error" role="alert">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="ui-empty" role="status">Chargement du tableau de bord…</div>
+  } @else {
+    <div class="kpi-grid" aria-label="Indicateurs des tâches">
+      <article class="kpi kpi--primary">
+        <span class="kpi-icon" aria-hidden="true"><app-icon name="tasks" /></span>
+        <div><span class="kpi-label">Total des tâches</span><strong class="kpi-value">{{ stats()?.tasks_total ?? 0 }}</strong></div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon kpi-icon--blue" aria-hidden="true"><app-icon name="refresh" /></span>
+        <div><span class="kpi-label">En cours</span><strong class="kpi-value">{{ stats()?.tasks_by_status?.in_progress ?? 0 }}</strong></div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon kpi-icon--amber" aria-hidden="true"><app-icon name="check" /></span>
+        <div><span class="kpi-label">À valider</span><strong class="kpi-value">{{ pendingReviewCount() }}</strong></div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon kpi-icon--red" aria-hidden="true"><app-icon name="alert" /></span>
+        <div><span class="kpi-label">En retard</span><strong class="kpi-value">{{ stats()?.tasks_overdue ?? 0 }}</strong></div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon kpi-icon--green" aria-hidden="true"><app-icon name="calendar" /></span>
+        <div><span class="kpi-label">Échéances (7 jours)</span><strong class="kpi-value">{{ stats()?.tasks_due_soon ?? 0 }}</strong></div>
+      </article>
+    </div>
+
+    <div class="breakdown-grid">
+      <section class="ui-card breakdown" aria-labelledby="status-title">
+        <h3 id="status-title">Répartition par statut</h3>
+        <ul class="bars">
+          @for (metric of statusMetrics(); track metric.status) {
+            <li>
+              <span class="bar-label">{{ metric.label }}</span>
+              <span class="bar-track" aria-hidden="true"><span class="bar-fill" [class]="'bar-fill bar-fill--' + statusTone(metric.status)" [style.width.%]="metric.share"></span></span>
+              <strong class="bar-count">{{ metric.count }}</strong>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="ui-card breakdown" aria-labelledby="priority-title">
+        <h3 id="priority-title">Tâches ouvertes par priorité</h3>
+        <ul class="bars">
+          @for (metric of priorityMetrics(); track metric.priority) {
+            <li>
+              <span class="bar-label">{{ metric.label }}</span>
+              <span class="bar-track" aria-hidden="true"><span class="bar-fill" [class]="'bar-fill bar-fill--' + priorityTone(metric.priority)" [style.width.%]="metric.share"></span></span>
+              <strong class="bar-count">{{ metric.count }}</strong>
+            </li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    @if (user()?.role !== 'admin') {
+      <section class="ui-card recent-panel" aria-labelledby="recent-title">
+        <div class="panel-header">
+          <div>
+            <h3 id="recent-title">Tâches récentes</h3>
+            <p>Les dernières tâches de votre périmètre</p>
+          </div>
+          <a class="ui-btn ui-btn--sm" routerLink="/tasks">Tout voir<app-icon name="arrow" /></a>
+        </div>
+
+        @if (tasks().length) {
+          <div class="ui-table-wrap">
+            <table class="ui-table ui-table--stack">
+              <thead>
+                <tr><th scope="col">Tâche</th><th scope="col">Responsable</th><th scope="col">Échéance</th><th scope="col">Statut</th></tr>
+              </thead>
+              <tbody>
+                @for (task of tasks(); track task.id) {
+                  <tr>
+                    <td data-label="Tâche">
+                      <a class="task-title" [routerLink]="['/tasks', task.id]">{{ task.title }}</a>
+                      <small>{{ task.department }}{{ task.division ? ' · ' + task.division : '' }}</small>
+                    </td>
+                    <td data-label="Responsable">{{ task.assignee?.name || 'Non attribuée' }}</td>
+                    <td data-label="Échéance" [class.late]="task.is_overdue">{{ task.due_at ? (task.due_at | date: 'dd/MM/yyyy') : '—' }}</td>
+                    <td data-label="Statut">
+                      <span class="ui-badge" [class]="'ui-badge ui-badge--' + statusTone(task.status)">{{ statusLabel(task) }}</span>
+                      @if (task.is_overdue) { <span class="ui-badge ui-badge--red">En retard</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="ui-empty">Aucune tâche à afficher pour le moment.</p>
+        }
+      </section>
+    }
+  }
+</section>

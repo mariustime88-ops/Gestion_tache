@@ -1,0 +1,60 @@
+<main class="auth-layout">
+  <section class="auth-story" aria-label="Présentation de la plateforme">
+    <a class="brand" routerLink="/login" aria-label="Suivi, accueil">
+      <span class="brand-mark" aria-hidden="true"><app-icon name="tasks" /></span>
+      <span class="brand-text"><strong>SUIVI</strong><small>Gestion des tâches</small></span>
+    </a>
+
+    <div class="story-copy">
+      <span class="eyebrow">PLATEFORME DE GESTION DES TÂCHES</span>
+      <h1>Chaque tâche à sa juste place.</h1>
+      <p>Attribuez, suivez et validez le travail de votre organisation en respectant la chaîne hiérarchique.</p>
+      <ul class="story-points">
+        <li><app-icon name="flag" /><span><strong>Structurer l’attribution</strong> selon la hiérarchie</span></li>
+        <li><app-icon name="clock" /><span><strong>Suivre l’avancement</strong> et détecter les retards</span></li>
+        <li><app-icon name="audit" /><span><strong>Tracer et piloter</strong> avec un historique fiable</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="mobile-brand">
+      <span class="brand-mark" aria-hidden="true"><app-icon name="tasks" /></span>
+      <strong>SUIVI</strong>
+    </div>
+
+    <div class="auth-card">
+      <h2>Connexion</h2>
+      <p class="auth-intro">Accédez à votre espace avec les identifiants fournis par l’administration.</p>
+
+      @if (error()) {
+        <div class="notice notice--error" role="alert">{{ error() }}</div>
+      }
+
+      <form [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+        <label for="email">Adresse e-mail</label>
+        <input id="email" type="email" formControlName="email" autocomplete="username" placeholder="vous@organisation.bj">
+        @if (loginForm.controls.email.touched && loginForm.controls.email.invalid) {
+          <span class="field-error">Saisissez une adresse e-mail valide.</span>
+        }
+
+        <label for="password">Mot de passe</label>
+        <div class="password-field">
+          <input id="password" [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" placeholder="Votre mot de passe">
+          <button class="password-toggle" type="button" [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'" (click)="togglePassword()">
+            <app-icon name="eye" />
+          </button>
+        </div>
+        @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
+          <span class="field-error">Saisissez votre mot de passe.</span>
+        }
+
+        <button class="button-primary" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Connexion…' : 'Se connecter' }}
+        </button>
+      </form>
+
+      <p class="auth-footer"><a routerLink="/politique-confidentialite">Politique de confidentialité</a></p>
+    </div>
+  </section>
+</main>

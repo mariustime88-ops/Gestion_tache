@@ -1,0 +1,139 @@
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">ORGANISATION</span>
+    <h1>Équipes</h1>
+    <p>Les équipes sont organisées par service et par division.</p>
+  </div>
+  <div class="team-summary" aria-live="polite">
+    <span><strong>{{ total() }}</strong> membre{{ total() === 1 ? '' : 's' }}</span>
+    <span class="summary-divider" aria-hidden="true"></span>
+    <span><strong>{{ teams().length }}</strong> équipe{{ teams().length === 1 ? '' : 's' }}</span>
+  </div>
+</section>
+
+@if (error()) {
+  <div class="inline-error" role="alert">{{ error() }}</div>
+}
+
+<section class="team-panel" aria-label="Équipes de l’organisation">
+  <div class="team-toolbar">
+    <div>
+      <h2>Équipes de l’organisation</h2>
+      <p>Consultez les responsables et les membres de chaque service.</p>
+    </div>
+    <label class="search-box">
+      <svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m13 13 4 4"></path></svg>
+      <input type="search" aria-label="Rechercher une équipe ou un membre" placeholder="Rechercher une équipe ou un membre…" [value]="search()" (input)="changeSearch($event)">
+    </label>
+  </div>
+
+  @if (loading()) {
+    <div class="list-state" role="status">Chargement des équipes…</div>
+  } @else if (teams().length) {
+    <div class="team-list">
+      @for (team of visibleTeams(); track team.key) {
+        <article class="team-card">
+          <header class="team-card-heading">
+            <div class="team-heading-icon" aria-hidden="true">{{ initials(team.department) }}</div>
+            <div class="team-heading-copy">
+              <span class="eyebrow">SERVICE</span>
+              <h2>{{ team.department }}</h2>
+            </div>
+            <span class="team-member-count">{{ team.members }} membre{{ team.members === 1 ? '' : 's' }}</span>
+          </header>
+
+          <div class="team-card-content">
+            @if (team.managers.length) {
+              <section class="team-lead-section" aria-label="Responsable du service">
+                <h3>Responsable du service</h3>
+                <div class="people-list">
+                  @for (manager of team.managers; track manager.id) {
+                    <div class="person-row">
+                      <span class="person-avatar" aria-hidden="true">{{ initials(manager.name) }}</span>
+                      <span class="person-info">
+                        <strong>{{ manager.name }}</strong>
+                        <small>{{ manager.email }}</small>
+                      </span>
+                      <span class="role-pill">{{ workspace.roleName(manager.role) }}</span>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (team.divisions.length) {
+              <section class="team-divisions" aria-label="Divisions du service">
+                @for (division of team.divisions; track division.key) {
+                  <div class="division-card">
+                    <header class="division-heading">
+                      <div>
+                        <span class="eyebrow">DIVISION</span>
+                        <h3>{{ division.name }}</h3>
+                      </div>
+                      <span class="division-member-count">{{ division.members.length }} membre{{ division.members.length === 1 ? '' : 's' }}</span>
+                    </header>
+                    <div class="people-list">
+                      @for (member of division.members; track member.id) {
+                        <div class="person-row">
+                          <span class="person-avatar person-avatar--small" aria-hidden="true">{{ initials(member.name) }}</span>
+                          <span class="person-info">
+                            <strong>{{ member.name }}</strong>
+                            <small>{{ member.email }}</small>
+                          </span>
+                          <span class="role-pill">{{ workspace.roleName(member.role) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </section>
+            }
+
+            @if (team.unassigned.length) {
+              <section class="team-lead-section" aria-label="Membres du service sans division">
+                <h3>Membres du service</h3>
+                <div class="people-list">
+                  @for (member of team.unassigned; track member.id) {
+                    <div class="person-row">
+                      <span class="person-avatar person-avatar--small" aria-hidden="true">{{ initials(member.name) }}</span>
+                      <span class="person-info">
+                        <strong>{{ member.name }}</strong>
+                        <small>{{ member.email }}</small>
+                      </span>
+                      <span class="role-pill">{{ workspace.roleName(member.role) }}</span>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        </article>
+      }
+    </div>
+    @if (lastPage() > 1) {
+      <footer class="pagination">
+        <span>Équipes {{ displayFrom() }}–{{ displayTo() }} sur {{ teams().length }}</span>
+        <nav class="pagination-controls" aria-label="Pagination des équipes">
+          <button type="button" [disabled]="page() <= 1 || loading()" (click)="changePage(page() - 1)">Précédent</button>
+          @for (pageNumber of pageNumbers(); track pageNumber) {
+            <button
+              type="button"
+              [class.pagination-page--active]="pageNumber === page()"
+              [attr.aria-current]="pageNumber === page() ? 'page' : null"
+              [attr.aria-label]="'Page ' + pageNumber"
+              [disabled]="loading()"
+              (click)="changePage(pageNumber)"
+            >{{ pageNumber }}</button>
+          }
+          <button type="button" [disabled]="page() >= lastPage() || loading()" (click)="changePage(page() + 1)">Suivant</button>
+        </nav>
+      </footer>
+    }
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">⌂</span>
+      <strong>{{ search() ? 'Aucune équipe ne correspond à votre recherche.' : 'Aucune équipe à afficher.' }}</strong>
+      <p>{{ search() ? 'Essayez un autre nom, service ou division.' : 'Les profils actifs rattachés à un service apparaîtront ici.' }}</p>
+    </div>
+  }
+</section>

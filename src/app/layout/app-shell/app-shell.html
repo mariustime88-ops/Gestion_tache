@@ -1,0 +1,182 @@
+<div class="admin-layout">
+  @if (mobileMenuOpen()) {
+    <button class="sidebar-backdrop" type="button" aria-label="Fermer le menu de navigation" (click)="closeMobileMenu()"></button>
+  }
+
+  <aside
+    class="sidebar"
+    [class.sidebar--open]="mobileMenuOpen()"
+    [class.sidebar--collapsed]="sidebarCollapsed()"
+    aria-label="Menu principal"
+  >
+    <div class="sidebar-header">
+      <a class="brand" routerLink="/dashboard" (click)="closeMobileMenu()" aria-label="Suivi, tableau de bord">
+        <span class="brand-mark" aria-hidden="true"><app-icon name="tasks" /></span>
+        <span class="brand-text"><strong>SUIVI</strong><small>Gestion des tâches</small></span>
+      </a>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Navigation principale">
+      <span class="nav-section-label">MENU</span>
+      @if (canAccessPage('dashboard')) {
+        <a class="nav-link" routerLink="/dashboard" routerLinkActive="nav-link--active"
+          aria-label="Tableau de bord" title="Tableau de bord" (click)="closeMobileMenu()">
+          <app-icon name="dashboard" /><span>Tableau de bord</span>
+        </a>
+      }
+      @if (canAccessPage('tasks')) {
+        <a class="nav-link" routerLink="/tasks" routerLinkActive="nav-link--active"
+          aria-label="Tâches" title="Tâches" (click)="closeMobileMenu()">
+          <app-icon name="tasks" /><span>Tâches</span>
+        </a>
+      }
+      @if (canAccessPage('team')) {
+        <a class="nav-link" routerLink="/team" routerLinkActive="nav-link--active"
+          aria-label="Équipe" title="Équipe" (click)="closeMobileMenu()">
+          <app-icon name="team" /><span>Équipe</span>
+        </a>
+      }
+
+      @if (canAccessPage('organization') || canAccessPage('audit')) {
+        <span class="nav-section-label nav-section-label--spaced">ADMIN</span>
+        @if (canAccessPage('organization')) {
+          <a class="nav-link" routerLink="/users" routerLinkActive="nav-link--active"
+            aria-label="Organisation et profils" title="Organisation et profils" (click)="closeMobileMenu()">
+            <app-icon name="org" /><span>Organisation et profils</span>
+          </a>
+        }
+        @if (canAccessPage('settings')) {
+          <a class="nav-link" routerLink="/settings" routerLinkActive="nav-link--active"
+            aria-label="Paramètres" title="Paramètres" (click)="closeMobileMenu()">
+            <app-icon name="settings" /><span>Paramètres</span>
+          </a>
+        }
+        @if (canAccessPage('audit')) {
+          <a class="nav-link" routerLink="/audit" routerLinkActive="nav-link--active"
+            aria-label="Journal d’audit" title="Journal d’audit" (click)="closeMobileMenu()">
+            <app-icon name="audit" /><span>Journal d’audit</span>
+          </a>
+        }
+      }
+
+      <span class="nav-section-label nav-section-label--spaced">COMPTE</span>
+      @if (canAccessPage('profile')) {
+        <a class="nav-link" routerLink="/profile" routerLinkActive="nav-link--active"
+          aria-label="Mon profil" title="Mon profil" (click)="closeMobileMenu()">
+          <app-icon name="user" /><span>Mon profil</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-button" type="button" aria-label="Se déconnecter" title="Se déconnecter" (click)="signOut()">
+        <app-icon name="logout" /><span>Se déconnecter</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-panel" [class.main-panel--sidebar-collapsed]="sidebarCollapsed()">
+    <header class="topbar">
+      <div class="topbar-start">
+        <button class="icon-button menu-toggle" type="button"
+          [attr.aria-label]="navigationMenuExpanded() ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'"
+          [attr.aria-expanded]="navigationMenuExpanded()"
+          (click)="$event.stopPropagation(); toggleNavigationMenu()">
+          <app-icon name="menu" />
+        </button>
+        <h1 class="topbar-title">{{ pageHeading() || 'Espace de gestion' }}</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-button" type="button"
+          [attr.aria-label]="darkMode() ? 'Activer le thème clair' : 'Activer le thème sombre'"
+          [attr.aria-pressed]="darkMode()" (click)="$event.stopPropagation(); toggleTheme()">
+          <app-icon [name]="darkMode() ? 'moon' : 'sun'" />
+        </button>
+        <button class="icon-button notification-toggle" type="button" aria-label="Notifications"
+          [attr.aria-expanded]="notificationsOpen()" (click)="$event.stopPropagation(); toggleNotifications()">
+          <app-icon name="bell" />
+          @if (unreadCount() > 0) {
+            <span class="notification-badge">{{ unreadCount() > 9 ? '9+' : unreadCount() }}</span>
+          }
+        </button>
+        <button class="profile-trigger" type="button" aria-label="Ouvrir le menu du profil"
+          [attr.aria-expanded]="profileMenuOpen()" (click)="$event.stopPropagation(); toggleProfileMenu()">
+          <span class="topbar-avatar">
+            @if (user()?.profile_photo_url; as photoUrl) {
+              <img [src]="photoUrl" alt="" />
+            } @else {
+              {{ user()?.name?.slice(0, 1) || 'A' }}
+            }
+          </span>
+          <span class="user-meta">
+            <strong>{{ user()?.name }}</strong>
+            <small>{{ roleLabel() }}</small>
+          </span>
+          <app-icon name="chevron" />
+        </button>
+      </div>
+    </header>
+
+    @if (idleWarning()) {
+      <div class="idle-banner" role="alert">
+        <span>Sans activité, vous serez déconnecté dans {{ idleSecondsLeft() }} s.</span>
+        <button type="button" (click)="stayConnected()">Rester connecté</button>
+      </div>
+    }
+
+    @if (error()) {
+      <div class="global-error" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" aria-label="Fermer le message" (click)="error.set('')"><app-icon name="close" /></button>
+      </div>
+    }
+
+    @if (profileMenuOpen()) {
+      <div class="floating-menu" (click)="$event.stopPropagation()">
+        <a routerLink="/profile" (click)="closeProfileMenu()">Mon profil</a>
+        <button type="button" (click)="signOut()">Se déconnecter</button>
+      </div>
+    }
+
+    @if (notificationsOpen()) {
+      <section class="notifications-panel" aria-label="Notifications récentes" (click)="$event.stopPropagation()">
+        <div class="notifications-header">
+          <strong>Notifications</strong>
+          <span>{{ unreadCount() }} non lue(s)</span>
+        </div>
+        @if (notifications().length) {
+          @for (notification of notifications(); track notification.id) {
+            <div class="notification-row" [class.notification-row--unread]="!notification.read_at">
+              <button class="notification-open" type="button" (click)="openNotification(notification)">
+                <span class="notification-dot" aria-hidden="true"></span>
+                <span class="notification-content">
+                  <strong>{{ notification.data.title || 'Nouvelle notification' }}</strong>
+                  <small>{{ notification.data.message }}</small>
+                </span>
+              </button>
+              @if (notification.data.can_start && notification.data.task_id) {
+                <button class="notification-start" type="button"
+                  [disabled]="startingTaskNotificationId() === notification.id"
+                  (click)="startTaskFromNotification(notification)">
+                  {{ startingTaskNotificationId() === notification.id ? 'Démarrage…' : 'Démarrer' }}
+                </button>
+              }
+            </div>
+          }
+        } @else {
+          <p class="empty-state">Aucune notification.</p>
+        }
+      </section>
+    }
+
+    <main class="content-area">
+      <router-outlet />
+    </main>
+
+    <footer class="app-footer">
+      <span>© {{ year }} Suivi — Plateforme de gestion des tâches</span>
+      <a routerLink="/politique-confidentialite">Politique de confidentialité</a>
+    </footer>
+  </div>
+</div>

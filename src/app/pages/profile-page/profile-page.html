@@ -1,0 +1,111 @@
+<section class="profile-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">VOTRE COMPTE</span>
+      <h1>Mon profil</h1>
+      <p>Gérez vos informations personnelles et la sécurité de votre compte.</p>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="notice notice--error" role="alert">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="notice notice--success" role="status">{{ success() }}</div>
+  }
+
+  <form class="profile-form" [formGroup]="form" (ngSubmit)="save()">
+    <section class="profile-card profile-card--identity" aria-labelledby="identity-heading">
+      <div class="card-heading">
+        <div>
+          <h2 id="identity-heading">Informations personnelles</h2>
+          <p>Ces informations apparaissent dans votre espace de travail.</p>
+        </div>
+      </div>
+
+      <div class="identity-content">
+        <div class="photo-editor">
+          <div class="photo-preview" aria-label="Photo de profil">
+            @if (displayedPhoto(); as photo) {
+              <img [src]="photo" alt="Photo de profil">
+            } @else {
+              <span aria-hidden="true">{{ user()?.name?.slice(0, 1) }}</span>
+            }
+          </div>
+          <div class="photo-actions">
+            <strong>Photo de profil</strong>
+            <span>JPG, PNG ou WebP · 5 Mo maximum</span>
+            <input
+              id="profile-photo"
+              class="visually-hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              (change)="selectPhoto($event)"
+            >
+            <label class="photo-picker" for="profile-photo">Choisir une photo</label>
+            @if (photoError()) {
+              <small class="field-error" role="alert">{{ photoError() }}</small>
+            }
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="profile-name">Nom complet</label>
+            <input id="profile-name" type="text" formControlName="name" autocomplete="name" maxlength="120">
+            @if (form.controls.name.touched && form.controls.name.invalid) {
+              <small class="field-error">Saisissez un nom de 120 caractères maximum.</small>
+            }
+          </div>
+          <div class="field">
+            <label for="profile-email">Adresse e-mail</label>
+            <input id="profile-email" type="email" [value]="user()?.email ?? ''" readonly aria-describedby="email-help">
+            <small id="email-help" class="field-help">Cette adresse est liée à votre compte et ne peut pas être modifiée.</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="profile-card" aria-labelledby="security-heading">
+      <div class="card-heading">
+        <div>
+          <h2 id="security-heading">Sécurité</h2>
+          <p>Le mot de passe ne change que si vous le demandez.</p>
+        </div>
+      </div>
+
+      @if (!passwordChangeEnabled()) {
+        <button class="password-toggle" type="button" (click)="togglePasswordChange()">
+          Changer mon mot de passe
+        </button>
+      } @else {
+        <div class="password-fields">
+          <div class="field-grid">
+            <div class="field">
+              <label for="current-password">Mot de passe actuel</label>
+              <input id="current-password" type="password" formControlName="current_password" autocomplete="current-password">
+            </div>
+            <div class="field">
+              <label for="new-password">Nouveau mot de passe</label>
+              <input id="new-password" type="password" formControlName="password" autocomplete="new-password">
+              @if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
+                <small class="field-error">Le nouveau mot de passe doit comporter au moins 8 caractères.</small>
+              }
+            </div>
+            <div class="field">
+              <label for="confirm-password">Confirmer le nouveau mot de passe</label>
+              <input id="confirm-password" type="password" formControlName="password_confirmation" autocomplete="new-password">
+            </div>
+          </div>
+          <button class="password-cancel" type="button" (click)="togglePasswordChange()">Annuler</button>
+        </div>
+      }
+    </section>
+
+    <div class="form-actions">
+      <button class="save-button" type="submit" [disabled]="busy()">
+        {{ busy() ? 'Enregistrement…' : 'Enregistrer les modifications' }}
+      </button>
+    </div>
+  </form>
+</section>

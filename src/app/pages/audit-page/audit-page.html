@@ -1,0 +1,68 @@
+<div class="ui-page-head">
+  <div>
+    <h2>Journal d’audit</h2>
+    <p>Historique horodaté et non modifiable des actions : auteur, date, action et valeurs changées.</p>
+  </div>
+</div>
+
+<section class="ui-card">
+  <form class="ui-toolbar" (ngSubmit)="load(1)">
+    <input class="ui-input ui-grow" name="search" type="search" [(ngModel)]="search" placeholder="Rechercher une action ou un auteur…" aria-label="Rechercher dans le journal">
+    <select class="ui-select" name="action" [(ngModel)]="action" (ngModelChange)="load(1)" aria-label="Filtrer par type d’action">
+      @for (filter of actionFilters; track filter.value) {
+        <option [value]="filter.value">{{ filter.label }}</option>
+      }
+    </select>
+    <button class="ui-btn ui-btn--primary" type="submit"><app-icon name="search" />Rechercher</button>
+  </form>
+
+  @if (error()) {
+    <div class="ui-alert ui-alert--error audit-error" role="alert">{{ error() }}</div>
+  } @else if (loading()) {
+    <p class="ui-empty">Chargement du journal…</p>
+  } @else if (!entries().length) {
+    <p class="ui-empty">Aucune entrée dans le journal pour ces critères.</p>
+  } @else {
+    <div class="ui-table-wrap">
+      <table class="ui-table ui-table--stack">
+        <thead>
+          <tr><th>Date</th><th>Auteur</th><th>Action</th><th>Détail</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (entry of entries(); track entry.id) {
+            <tr>
+              <td data-label="Date">{{ entry.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td data-label="Auteur">{{ entry.user?.name ?? 'Système' }}</td>
+              <td data-label="Action"><span class="ui-badge" [class]="'ui-badge ui-badge--' + actionTone(entry.action)">{{ actionLabel(entry.action) }}</span></td>
+              <td data-label="Détail">
+                {{ entry.description }}
+                @if (expanded() === entry.id && changeRows(entry).length) {
+                  <ul class="audit-changes">
+                    @for (row of changeRows(entry); track row.field) {
+                      <li><strong>{{ row.field }}</strong> : {{ row.old }} → {{ row.new }}</li>
+                    }
+                  </ul>
+                }
+              </td>
+              <td class="audit-more">
+                @if (changeRows(entry).length) {
+                  <button class="ui-btn ui-btn--sm" type="button" (click)="toggle(entry.id)">
+                    {{ expanded() === entry.id ? 'Masquer' : 'Valeurs' }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ui-pagination">
+      <span>{{ total() }} entrée(s) · page {{ page() }} sur {{ lastPage() }}</span>
+      <div class="ui-actions">
+        <button class="ui-btn ui-btn--sm" type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Précédent</button>
+        <button class="ui-btn ui-btn--sm" type="button" [disabled]="page() >= lastPage()" (click)="load(page() + 1)">Suivant</button>
+      </div>
+    </div>
+  }
+</section>

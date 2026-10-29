@@ -1,0 +1,19 @@
+<main class="policy-page">
+  <article class="policy-card">
+    <a class="back-link" routerLink="/login">← Retour à la connexion</a>
+    <span class="eyebrow">SUIVI · INFORMATIONS</span>
+    <h1>Politique de confidentialité</h1>
+    @if (loading()) {
+      <p class="policy-state" role="status">Chargement de la politique…</p>
+    } @else if (error()) {
+      <p class="policy-state policy-state--error" role="alert">{{ error() }}</p>
+    } @else if (policy()?.content; as content) {
+      @if (policy()?.published_at; as publishedAt) {
+        <p class="updated">Dernière mise à jour : {{ publishedAt | date: 'dd/MM/yyyy' }}</p>
+      }
+      <p class="policy-content">{{ content }}</p>
+    } @else {
+      <p class="policy-state" role="status">La politique de confidentialité est en cours de rédaction et sera publiée prochainement.</p>
+    }
+  </article>
+</main>

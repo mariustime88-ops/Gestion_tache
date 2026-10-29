@@ -1,0 +1,86 @@
+<main class="settings-page">
+  <header class="page-heading">
+    <div>
+      <span class="eyebrow">ESPACE ADMINISTRATEUR</span>
+      <h1>Paramètres</h1>
+    </div>
+  </header>
+
+  <section class="settings-section" aria-labelledby="appearance-heading">
+    <div class="section-heading">
+      <div>
+        <h2 id="appearance-heading">Apparence</h2>
+        <p>Choisissez le thème utilisé dans l’espace d’administration.</p>
+      </div>
+    </div>
+    <article class="settings-card appearance-card">
+      <div class="setting-icon setting-icon--appearance" aria-hidden="true">
+        @if (theme.darkMode()) {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+          </svg>
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z"></path>
+          </svg>
+        }
+      </div>
+      <div class="setting-copy">
+        <h3>Thème de l’espace</h3>
+        <p>{{ theme.darkMode() ? 'Le thème sombre est activé.' : 'Le thème clair est activé.' }} Votre choix est mémorisé sur cet appareil.</p>
+      </div>
+      <button
+        class="theme-button"
+        type="button"
+        [attr.aria-pressed]="theme.darkMode()"
+        (click)="theme.toggle()"
+      >{{ theme.darkMode() ? 'Passer au thème clair' : 'Passer au thème sombre' }}</button>
+    </article>
+  </section>
+
+  <section class="settings-section" aria-labelledby="management-heading">
+    <div class="section-heading">
+      <div>
+        <h2 id="management-heading">Organisation et compte</h2>
+        <p>Accédez aux réglages déjà disponibles dans votre espace.</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <a class="settings-card setting-link" routerLink="/users">
+        <span class="setting-icon setting-icon--organization" aria-hidden="true">♙</span>
+        <span class="setting-copy">
+          <strong>Organisation et profils</strong>
+          <span>Gérez les profils, les rôles, les divisions et les accès.</span>
+        </span>
+        <span class="setting-arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a class="settings-card setting-link" routerLink="/profile">
+        <span class="setting-icon setting-icon--account" aria-hidden="true">◎</span>
+        <span class="setting-copy">
+          <strong>Compte et sécurité</strong>
+          <span>Modifiez vos informations et votre mot de passe.</span>
+        </span>
+        <span class="setting-arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a class="settings-card setting-link" routerLink="/settings/privacy-policy">
+        <span class="setting-icon setting-icon--privacy" aria-hidden="true">◈</span>
+        <span class="setting-copy">
+          <strong>Politique de confidentialité</strong>
+          <span>Rédigez et publiez les informations de confidentialité de votre organisation.</span>
+        </span>
+        <span class="setting-arrow" aria-hidden="true">→</span>
+      </a>
+
+      <article class="settings-card setting-information">
+        <span class="setting-icon setting-icon--notifications" aria-hidden="true">♧</span>
+        <div class="setting-copy">
+          <h3>Notifications</h3>
+          <p>Consultez les notifications récentes avec la cloche dans la barre supérieure. Les préférences de notification ne sont pas configurables pour le moment.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</main>

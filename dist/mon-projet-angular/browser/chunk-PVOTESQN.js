@@ -1,0 +1,1 @@
+function t(e){return{assigned:"grey",in_progress:"blue",submitted:"amber",needs_revision:"violet",paused:"grey",completed:"green",rejected:"red"}[e]}function s(e){return{low:"grey",normal:"blue",high:"amber",urgent:"red"}[e]??"grey"}export{t as a,s as b};
